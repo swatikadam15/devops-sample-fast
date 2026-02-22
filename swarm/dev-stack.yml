@@ -1,4 +1,4 @@
-ervices:
+services:
   client-a:
     image: swatikadam16/client-a-node-app:latest
     ports:
@@ -15,7 +15,7 @@ ervices:
     secrets:
       - client_a_db
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=dev
 
 
 networks:
