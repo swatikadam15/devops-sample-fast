@@ -70,5 +70,5 @@ jobs:
           ssh -i private_key.pem -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST <<EOF
           docker service update \
           --image swatikadam16/client-b-python-app:${{ github.sha }} \
-          multi-client_client-b-python-app
+          multi-client_client-b
           EOF
