@@ -73,9 +73,4 @@ jobs:
           --image swatikadam16/client-b-python-app:${{ github.sha }} \
           multi-client_client-b
           EOF
-sudo docker stack deploy -c dev-stack.yml multi-client
-
-sudo docker stack deploy -c stage-stack.yml multi-client
-
-sudo docker stack deploy -c prod-stack.yml multi-client
 
