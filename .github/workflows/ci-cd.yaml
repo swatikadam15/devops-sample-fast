@@ -51,6 +51,11 @@ jobs:
           echo "Testing SSH connectivity to $SSH_USER@$SSH_HOST ..."
           ssh -i private_key.pem -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST "echo ✅ Connected successfully to $(hostname)"
 
+
+
+
+          
+
       # Step 7: Deploy to Docker Swarm on remote host
       - name: Deploy to Docker Swarm
         env:
