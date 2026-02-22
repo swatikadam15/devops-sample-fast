@@ -3,41 +3,53 @@ name: Deploy
 on:
   push:
     branches:
-      - master
+      - master       # Trigger when pushing to branch "master"
+  workflow_dispatch:  # Allow manual runs from GitHub Actions UI
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the repository
+      # Step 1: Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Step 2: Build Docker image (with commit SHA and latest tags)
+      # Step 2: Log in to Docker Hub
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Step 3: Build Docker image (with commit SHA and latest tags)
       - name: Build Docker image
         run: |
           docker build -t client-a-node-app:${{ github.sha }} -t client-a-node-app:latest .
 
-      # Step 3: Tag Docker image for Docker Hub
+      # Step 4: Tag Docker image for Docker Hub
       - name: Tag Docker image
         run: |
           docker tag client-a-node-app:${{ github.sha }} swatikadam16/client-a-node-app:${{ github.sha }}
           docker tag client-a-node-app:latest swatikadam16/client-a-node-app:latest
 
-      # 🟢 Step 4: Push Docker image to Docker Hub
+      # Step 5: Push Docker image to Docker Hub
       - name: Push Docker image to Docker Hub
         run: |
           docker push swatikadam16/client-a-node-app:${{ github.sha }}
           docker push swatikadam16/client-a-node-app:latest
 
-      # Step 5: Deploy to Docker Swarm on remote host
+      # Step 6: Deploy to Docker Swarm on remote host
       - name: Deploy to Docker Swarm
         env:
-          SSH_HOST: manager
-          SSH_USER: ec2-user
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
         run: |
-          ssh $SSH_USER@$SSH_HOST <<EOF
+          echo "${SSH_KEY}" > private_key.pem
+          chmod 600 private_key.pem
+          
+          ssh -i private_key.pem -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST <<EOF
           docker service update \
           --image swatikadam16/client-a-node-app:${{ github.sha }} \
           multi-client_client-a-node-app
