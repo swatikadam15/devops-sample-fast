@@ -6,6 +6,3 @@ Client-specific configurations
 Horizontal scaling
 Reverse proxy routing
 Rolling updates with zero downtime
-
-
-Infrastructure
