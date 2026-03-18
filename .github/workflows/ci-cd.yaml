@@ -53,6 +53,12 @@ jobs:
           ssh -i private_key.pem -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST "echo ✅ Connected successfully to $(hostname)"
 
 
+      - name: Deploy to Docker Swarm
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+
         run: |
           echo "${SSH_KEY}" > private_key.pem
           chmod 600 private_key.pem
