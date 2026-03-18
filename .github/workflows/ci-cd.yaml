@@ -47,6 +47,7 @@ jobs:
           SSH_KEY: ${{ secrets.SSH_KEY }}
         run: |
           echo "${SSH_KEY}" > private_key.pem
+          nc -zv $SSH_HOST 22
           chmod 600 private_key.pem
           echo "Testing SSH connectivity to $SSH_USER@$SSH_HOST ..."
           ssh -i private_key.pem -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST "echo ✅ Connected successfully to $(hostname)"
@@ -64,8 +65,7 @@ jobs:
 
           echo "Deploying new image on remote Swarm manager..."
           ssh -i private_key.pem -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST <<EOF
-          docker service update \
-          --image swatikadam16/client-b-python-app:${{ github.sha }} \
-          multi-client_client-b
+          export IMAGE_TAG=${{ github.sha }}
+          docker stack deploy -c ./swarm/dev-stack.yaml multi-client
           EOF
 
