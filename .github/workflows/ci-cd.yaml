@@ -63,9 +63,16 @@ jobs:
           echo "${SSH_KEY}" > private_key.pem
           chmod 600 private_key.pem
 
+          # echo "Deploying new image on remote Swarm manager..."
+          # ssh -i private_key.pem -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST <<EOF
+          # export IMAGE_TAG=${{ github.sha }}
+          # docker stack deploy -c ./swarm/dev-stack.yml multi-client
+          # EOF
+          
+
           echo "Deploying new image on remote Swarm manager..."
           ssh -i private_key.pem -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST <<EOF
-          export IMAGE_TAG=${{ github.sha }}
-          docker stack deploy -c ./swarm/dev-stack.yml multi-client
+          docker service update \
+          --image swatikadam16/client-b-python-app:${{ github.sha }} \
+          multi-client_client-b
           EOF
-
