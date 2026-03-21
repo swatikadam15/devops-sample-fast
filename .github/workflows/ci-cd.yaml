@@ -114,18 +114,24 @@ jobs:
         run: |
           docker push swatikadam16/client-a-node-app:${{ github.sha }}
 
-      # ✅ Step 1: Decide environment
+      # ✅ Step 1: Set correct environment mapping
       - name: Set Environment
         run: |
           if [[ "${GITHUB_REF}" == "refs/heads/master" ]]; then
-            echo "STACK_FILE=dev-stack.yaml" >> $GITHUB_ENV
+            echo "STACK_FILE=prod-stack.yaml" >> $GITHUB_ENV
           elif [[ "${GITHUB_REF}" == "refs/heads/stage" ]]; then
             echo "STACK_FILE=stage-stack.yaml" >> $GITHUB_ENV
           else
-            echo "STACK_FILE=prod-stack.yaml" >> $GITHUB_ENV
+            echo "STACK_FILE=dev-stack.yaml" >> $GITHUB_ENV
           fi
 
-      # ✅ Step 2: Prepare SSH key
+      # ✅ Debug (VERY IMPORTANT)
+      - name: Debug files
+        run: |
+          echo "STACK_FILE=$STACK_FILE"
+          ls -R
+
+      # ✅ Step 2: Setup SSH
       - name: Setup SSH
         run: |
           echo "${{ secrets.SSH_KEY }}" > private_key.pem
@@ -135,18 +141,21 @@ jobs:
       - name: Test SSH connection
         run: |
           nc -zv ${{ secrets.SSH_HOST }} 22
-          ssh -i private_key.pem -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo ✅ Connected"
+          ssh -i private_key.pem -o StrictHostKeyChecking=no \
+          ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo ✅ Connected"
 
-      # ✅ Step 4: Copy correct stack file
+      # ✅ Step 4: Copy stack file (FIXED PATH)
       - name: Copy stack file to server
         run: |
-          scp -i private_key.pem -o StrictHostKeyChecking=no $STACK_FILE \
+          scp -i private_key.pem -o StrictHostKeyChecking=no \
+          swarm/$STACK_FILE \
           ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/${{ secrets.SSH_USER }}/
 
-      # ✅ Step 5: Deploy using Docker Swarm
+      # ✅ Step 5: Deploy
       - name: Deploy to Docker Swarm
         run: |
-          ssh -i private_key.pem -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<EOF
+          ssh -i private_key.pem -o StrictHostKeyChecking=no \
+          ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<EOF
 
           export IMAGE_TAG=${{ github.sha }}
 
