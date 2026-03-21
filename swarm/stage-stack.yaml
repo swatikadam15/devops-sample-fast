@@ -4,7 +4,7 @@ services:
   client-a:
     image: swatikadam16/client-a-node-app:${IMAGE_TAG}
     ports:
-      - "3001:3000"   # different port to avoid conflict with dev
+      - "3002:8000"   # different port to avoid conflict with dev
     networks:
       - app-network
     deploy:
