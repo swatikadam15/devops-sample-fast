@@ -118,11 +118,11 @@ jobs:
       - name: Set Environment
         run: |
           if [[ "${GITHUB_REF}" == "refs/heads/master" ]]; then
-            echo "STACK_FILE=prod-stack.yaml" >> $GITHUB_ENV
+            echo "STACK_FILE=dev-stack.yml" >> $GITHUB_ENV
           elif [[ "${GITHUB_REF}" == "refs/heads/stage" ]]; then
             echo "STACK_FILE=stage-stack.yaml" >> $GITHUB_ENV
           else
-            echo "STACK_FILE=dev-stack.yml" >> $GITHUB_ENV
+            echo "STACK_FILE=prod-stack.yaml" >> $GITHUB_ENV
           fi
 
       # ✅ Step 2: Prepare SSH key
