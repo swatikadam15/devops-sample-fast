@@ -2,7 +2,7 @@ services:
   client-a:
     image: swatikadam16/client-a-node-app:${IMAGE_TAG}
     ports:
-      - "3000:3000"
+      - "3000:8000"
     networks:
       - app-network
     deploy:
