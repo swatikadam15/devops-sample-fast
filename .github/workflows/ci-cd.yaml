@@ -93,80 +93,83 @@ jobs:
 
     steps:
 
-      # Step 1: Checkout repository
+      # 1️⃣ Checkout code
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Step 2: Docker Hub login
+      # 2️⃣ Docker login
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Step 3: Build Docker image
+      # 3️⃣ Build image
       - name: Build Docker image
         run: |
           docker build -t client-a-node-app:${{ github.sha }} .
 
-      # Step 4: Tag Docker image
+      # 4️⃣ Tag image
       - name: Tag Docker image
         run: |
           docker tag client-a-node-app:${{ github.sha }} swatikadam16/client-a-node-app:${{ github.sha }}
 
-      # Step 5: Push Docker image
+      # 5️⃣ Push image
       - name: Push Docker image
         run: |
           docker push swatikadam16/client-a-node-app:${{ github.sha }}
 
-      # Step 6: Set environment-specific stack file
+      # 6️⃣ Detect branch + set STACK_FILE
       - name: Set Environment
         run: |
-          echo "Branch is: ${GITHUB_REF_NAME}"
-          if [[ "${GITHUB_REF_NAME}" == "master" ]]; then
+          echo "Full ref: $GITHUB_REF"
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          echo "Branch: $BRANCH_NAME"
+
+          if [[ "$BRANCH_NAME" == "master" ]]; then
             echo "STACK_FILE=dev-stack.yaml" >> $GITHUB_ENV
-          elif [[ "${GITHUB_REF_NAME}" == "stage" ]]; then
+          elif [[ "$BRANCH_NAME" == "stage" ]]; then
             echo "STACK_FILE=stage-stack.yaml" >> $GITHUB_ENV
           else
-            echo "STACK_FILE=dev-stack.yaml" >> $GITHUB_ENV
+            echo "STACK_FILE=prod-stack.yaml" >> $GITHUB_ENV
           fi
 
-      # Step 7: Debug environment
-      - name: Debug files
+      # 7️⃣ Debug (IMPORTANT)
+      - name: Debug
         run: |
-          echo "STACK_FILE=${{ env.STACK_FILE }}"
+          echo "Using STACK_FILE=${{ env.STACK_FILE }}"
           ls -R swarm/
 
-      # Step 8: Setup SSH key
+      # 8️⃣ Setup SSH
       - name: Setup SSH
         run: |
           echo "${{ secrets.SSH_KEY }}" > private_key.pem
           chmod 600 private_key.pem
 
-      # Step 9: Test SSH connection
+      # 9️⃣ Test SSH
       - name: Test SSH connection
         run: |
           nc -zv ${{ secrets.SSH_HOST }} 22
           ssh -i private_key.pem -o StrictHostKeyChecking=no \
           ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo ✅ Connected"
 
-      # Step 10: Copy stack file to server
-      - name: Copy stack file to server
+      # 🔟 Copy stack file
+      - name: Copy stack file
         run: |
           scp -i private_key.pem -o StrictHostKeyChecking=no \
           swarm/${{ env.STACK_FILE }} \
           ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/${{ secrets.SSH_USER }}/
 
-      # Step 11: Deploy to Docker Swarm
-      - name: Deploy to Docker Swarm
+      # 1️⃣1️⃣ Deploy to Swarm
+      - name: Deploy
         run: |
           ssh -i private_key.pem -o StrictHostKeyChecking=no \
           ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<EOF
 
           export IMAGE_TAG=${{ github.sha }}
 
-          echo "Deploying using ${{ env.STACK_FILE }} with IMAGE_TAG=$IMAGE_TAG"
+          echo "Deploying ${{ env.STACK_FILE }} with IMAGE_TAG=$IMAGE_TAG"
 
-          docker stack deploy -c /home/${{ secrets.SSH_USER }}/\${{ env.STACK_FILE }} multi-client
+          docker stack deploy -c /home/${{ secrets.SSH_USER }}/${{ env.STACK_FILE }} multi-client
 
           EOF
