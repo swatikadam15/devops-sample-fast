@@ -77,6 +77,8 @@
 #           multi-client_client-b
 #           EOF
 
+
+
 name: Deploy
 
 on:
@@ -104,22 +106,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 3️⃣ Build image
-      - name: Build Docker image
-        run: |
-          docker build -t client-a-node-app:${{ github.sha }} .
-
-      # 4️⃣ Tag image
-      - name: Tag Docker image
-        run: |
-          docker tag client-a-node-app:${{ github.sha }} swatikadam16/client-a-node-app:${{ github.sha }}
-
-      # 5️⃣ Push image
-      - name: Push Docker image
-        run: |
-          docker push swatikadam16/client-a-node-app:${{ github.sha }}
-
-      # 6️⃣ Detect branch + set STACK_FILE
+      # 3️⃣ Set ENV + IMAGE TAG ✅
       - name: Set Environment
         run: |
           echo "Full ref: $GITHUB_REF"
@@ -127,49 +114,67 @@ jobs:
           echo "Branch: $BRANCH_NAME"
 
           if [[ "$BRANCH_NAME" == "master" ]]; then
+            echo "ENV=dev" >> $GITHUB_ENV
             echo "STACK_FILE=dev-stack.yaml" >> $GITHUB_ENV
           elif [[ "$BRANCH_NAME" == "stage" ]]; then
+            echo "ENV=stage" >> $GITHUB_ENV
             echo "STACK_FILE=stage-stack.yaml" >> $GITHUB_ENV
           else
+            echo "ENV=prod" >> $GITHUB_ENV
             echo "STACK_FILE=prod-stack.yaml" >> $GITHUB_ENV
           fi
 
-      # 7️⃣ Debug (IMPORTANT)
+          echo "IMAGE_TAG=${ENV}-${GITHUB_SHA}" >> $GITHUB_ENV
+
+      # 4️⃣ Debug
       - name: Debug
         run: |
-          echo "Using STACK_FILE=${{ env.STACK_FILE }}"
+          echo "ENV=$ENV"
+          echo "STACK_FILE=$STACK_FILE"
+          echo "IMAGE_TAG=$IMAGE_TAG"
           ls -R swarm/
 
-      # 8️⃣ Setup SSH
+      # 5️⃣ Build image (ENV TAG) ✅
+      - name: Build Docker image
+        run: |
+          docker build -t swatikadam16/client-a-node-app:${IMAGE_TAG} .
+
+      # 6️⃣ Push image ✅
+      - name: Push Docker image
+        run: |
+          docker push swatikadam16/client-a-node-app:${IMAGE_TAG}
+
+      # 7️⃣ Setup SSH
       - name: Setup SSH
         run: |
           echo "${{ secrets.SSH_KEY }}" > private_key.pem
           chmod 600 private_key.pem
 
-      # 9️⃣ Test SSH
+      # 8️⃣ Test SSH
       - name: Test SSH connection
         run: |
           nc -zv ${{ secrets.SSH_HOST }} 22
           ssh -i private_key.pem -o StrictHostKeyChecking=no \
-          ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo ✅ Connected"
+          ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo Connected"
 
-      # 🔟 Copy stack file
+      # 9️⃣ Copy stack file
       - name: Copy stack file
         run: |
           scp -i private_key.pem -o StrictHostKeyChecking=no \
           swarm/${{ env.STACK_FILE }} \
           ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/${{ secrets.SSH_USER }}/
 
-      # 1️⃣1️⃣ Deploy to Swarm
+      # 🔟 Deploy to Swarm (UPDATED) ✅
       - name: Deploy
         run: |
           ssh -i private_key.pem -o StrictHostKeyChecking=no \
           ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<EOF
 
-          export IMAGE_TAG=${{ github.sha }}
+          export IMAGE_TAG=${IMAGE_TAG}
 
           echo "Deploying ${{ env.STACK_FILE }} with IMAGE_TAG=$IMAGE_TAG"
 
           docker stack deploy -c /home/${{ secrets.SSH_USER }}/${{ env.STACK_FILE }} multi-client
 
           EOF
+
