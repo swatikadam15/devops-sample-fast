@@ -78,7 +78,6 @@
 #           EOF
 
 
-
 name: Deploy
 
 on:
@@ -106,7 +105,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 3️⃣ Set ENV + IMAGE TAG ✅
+      # 3️⃣ Set ENV + IMAGE TAG ✅ (FIXED)
       - name: Set Environment
         run: |
           echo "Full ref: $GITHUB_REF"
@@ -114,17 +113,21 @@ jobs:
           echo "Branch: $BRANCH_NAME"
 
           if [[ "$BRANCH_NAME" == "master" ]]; then
-            echo "ENV=dev" >> $GITHUB_ENV
-            echo "STACK_FILE=dev-stack.yaml" >> $GITHUB_ENV
+            ENV_NAME=dev
+            STACK_FILE=dev-stack.yaml
           elif [[ "$BRANCH_NAME" == "stage" ]]; then
-            echo "ENV=stage" >> $GITHUB_ENV
-            echo "STACK_FILE=stage-stack.yaml" >> $GITHUB_ENV
+            ENV_NAME=stage
+            STACK_FILE=stage-stack.yaml
           else
-            echo "ENV=prod" >> $GITHUB_ENV
-            echo "STACK_FILE=prod-stack.yaml" >> $GITHUB_ENV
+            ENV_NAME=prod
+            STACK_FILE=prod-stack.yaml
           fi
 
-          echo "IMAGE_TAG=${ENV}-${GITHUB_SHA}" >> $GITHUB_ENV
+          IMAGE_TAG="${ENV_NAME}-${GITHUB_SHA}"
+
+          echo "ENV=$ENV_NAME" >> $GITHUB_ENV
+          echo "STACK_FILE=$STACK_FILE" >> $GITHUB_ENV
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
       # 4️⃣ Debug
       - name: Debug
@@ -164,7 +167,7 @@ jobs:
           swarm/${{ env.STACK_FILE }} \
           ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/${{ secrets.SSH_USER }}/
 
-      # 🔟 Deploy to Swarm (UPDATED) ✅
+      # 🔟 Deploy to Swarm (FIXED IMAGE TAG) ✅
       - name: Deploy
         run: |
           ssh -i private_key.pem -o StrictHostKeyChecking=no \
@@ -177,4 +180,3 @@ jobs:
           docker stack deploy -c /home/${{ secrets.SSH_USER }}/${{ env.STACK_FILE }} multi-client
 
           EOF
-
