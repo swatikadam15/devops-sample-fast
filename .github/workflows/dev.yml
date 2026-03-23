@@ -93,74 +93,93 @@ jobs:
 
     steps:
 
+      # 1️⃣ Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # 2️⃣ Docker login
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build Docker image
-        run: |
-          docker build -t client-a-node-app:${{ github.sha }} .
-
-      - name: Tag Docker image
-        run: |
-          docker tag client-a-node-app:${{ github.sha }} swatikadam16/client-a-node-app:${{ github.sha }}
-
-      - name: Push Docker image to Docker Hub
-        run: |
-          docker push swatikadam16/client-a-node-app:${{ github.sha }}
-
-      # ✅ Step 1: Set correct environment mapping
+      # 3️⃣ Set ENV + STACK + IMAGE TAG ✅ (FIXED)
       - name: Set Environment
         run: |
-          if [[ "${GITHUB_REF}" == "refs/heads/master" ]]; then
-            echo "STACK_FILE=dev-stack.yaml" >> $GITHUB_ENV
-          elif [[ "${GITHUB_REF}" == "refs/heads/stage" ]]; then
-            echo "STACK_FILE=stage-stack.yaml" >> $GITHUB_ENV
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          echo "Branch: $BRANCH_NAME"
+
+          if [[ "$BRANCH_NAME" == "master" ]]; then
+            ENV_NAME=dev
+            STACK_FILE=dev-stack.yaml
+            STACK_NAME=client-dev
+          elif [[ "$BRANCH_NAME" == "stage" ]]; then
+            ENV_NAME=stage
+            STACK_FILE=stage-stack.yaml
+            STACK_NAME=client-stage
           else
-            echo "STACK_FILE=prod-stack.yml" >> $GITHUB_ENV
+            ENV_NAME=dev
+            STACK_FILE=dev-stack.yaml
+            STACK_NAME=client-dev
           fi
 
-      # ✅ Debug (VERY IMPORTANT)
-      - name: Debug files
-        run: |
-          echo "STACK_FILE=$STACK_FILE"
-          ls -R
+          IMAGE_TAG="${ENV_NAME}-${GITHUB_SHA}"
 
-      # ✅ Step 2: Setup SSH
+          echo "ENV=$ENV_NAME" >> $GITHUB_ENV
+          echo "STACK_FILE=$STACK_FILE" >> $GITHUB_ENV
+          echo "STACK_NAME=$STACK_NAME" >> $GITHUB_ENV
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+
+      # 4️⃣ Debug (VERY IMPORTANT)
+      - name: Debug
+        run: |
+          echo "ENV=$ENV"
+          echo "STACK_FILE=$STACK_FILE"
+          echo "STACK_NAME=$STACK_NAME"
+          echo "IMAGE_TAG=$IMAGE_TAG"
+          ls -R swarm/
+
+      # 5️⃣ Build image (ENV TAG) ✅
+      - name: Build Docker image
+        run: |
+          docker build -t swatikadam16/client-a-node-app:${IMAGE_TAG} .
+
+      # 6️⃣ Push image ✅
+      - name: Push Docker image
+        run: |
+          docker push swatikadam16/client-a-node-app:${IMAGE_TAG}
+
+      # 7️⃣ Setup SSH
       - name: Setup SSH
         run: |
           echo "${{ secrets.SSH_KEY }}" > private_key.pem
           chmod 600 private_key.pem
 
-      # ✅ Step 3: Test SSH
+      # 8️⃣ Test SSH
       - name: Test SSH connection
         run: |
           nc -zv ${{ secrets.SSH_HOST }} 22
           ssh -i private_key.pem -o StrictHostKeyChecking=no \
-          ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo ✅ Connected"
+          ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo Connected"
 
-      # ✅ Step 4: Copy stack file (FIXED PATH)
+      # 9️⃣ Copy stack file
       - name: Copy stack file to server
         run: |
           scp -i private_key.pem -o StrictHostKeyChecking=no \
-          swarm/$STACK_FILE \
+          swarm/${STACK_FILE} \
           ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/${{ secrets.SSH_USER }}/
 
-      # ✅ Step 5: Deploy
+      # 🔟 Deploy to Docker Swarm ✅ (FIXED)
       - name: Deploy to Docker Swarm
         run: |
           ssh -i private_key.pem -o StrictHostKeyChecking=no \
           ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<EOF
 
-          export IMAGE_TAG=${{ github.sha }}
+          export IMAGE_TAG=${IMAGE_TAG}
 
-          echo "Deploying using $STACK_FILE with IMAGE_TAG=$IMAGE_TAG"
+          echo "Deploying $STACK_NAME using $STACK_FILE with IMAGE_TAG=$IMAGE_TAG"
 
-          docker stack deploy -c /home/${{ secrets.SSH_USER }}/$STACK_FILE multi-client
+          docker stack deploy -c /home/${{ secrets.SSH_USER }}/${STACK_FILE} $STACK_NAME
 
           EOF
