@@ -17,7 +17,7 @@ services:
     secrets:
       - client_a_db
     environment:
-      - NODE_ENV=staging
+      - NODE_ENV=stage
 
 
 networks:
@@ -31,6 +31,8 @@ secrets:
     #hello
     #hello
     #hello
+        #hello
+
         #hello
 
         #hello
