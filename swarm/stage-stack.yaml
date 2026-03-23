@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   client-a:
-    image: swatikadam16/client-stage-node-app:${IMAGE_TAG}
+    image: swatikadam16/client-a-node-app:${IMAGE_TAG}
     ports:
       - "3002:3000"   # different port to avoid conflict with dev
     networks:
