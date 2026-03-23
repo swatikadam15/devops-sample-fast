@@ -1,91 +1,10 @@
-# name: Deploy
-
-# on:
-#   push:
-#     branches:
-#       - master       
-#   workflow_dispatch:  
-
-# jobs:
-#   build:
-#     runs-on: ubuntu-latest
-
-#     steps:
-
-#       - name: Checkout repository
-#         uses: actions/checkout@v3
-
-    
-#       - name: Log in to Docker Hub
-#         uses: docker/login-action@v3
-#         with:
-#           username: ${{ secrets.DOCKERHUB_USERNAME }}
-#           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      
-#       - name: Build Docker image
-#         run: |
-#           docker build -t client-b-python-app:${{ github.sha }} .
-
-#       - name: Tag Docker image
-#         run: |
-#           docker tag client-b-python-app:${{ github.sha }} swatikadam16/client-b-python-app:${{ github.sha }}
-
-      
-
-  
-#       - name: Push Docker image to Docker Hub
-#         run: |
-#           docker push swatikadam16/client-b-python-app:${{ github.sha }}
-    
-
-      
-#       - name: Test SSH connection
-#         env:
-#           SSH_HOST: ${{ secrets.SSH_HOST }}
-#           SSH_USER: ${{ secrets.SSH_USER }}
-#           SSH_KEY: ${{ secrets.SSH_KEY }}
-#         run: |
-#           echo "${SSH_KEY}" > private_key.pem
-#           nc -zv $SSH_HOST 22
-#           chmod 600 private_key.pem
-#           echo "Testing SSH connectivity to $SSH_USER@$SSH_HOST ..."
-#           ssh -i private_key.pem -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST "echo ✅ Connected successfully to $(hostname)"
-
-
-#       - name: Deploy to Docker Swarm
-#         env:
-#           SSH_HOST: ${{ secrets.SSH_HOST }}
-#           SSH_USER: ${{ secrets.SSH_USER }}
-#           SSH_KEY: ${{ secrets.SSH_KEY }}
-
-#         run: |
-#           echo "${SSH_KEY}" > private_key.pem
-#           chmod 600 private_key.pem
-
-#           # echo "Deploying new image on remote Swarm manager..."
-#           # ssh -i private_key.pem -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST <<EOF
-#           # export IMAGE_TAG=${{ github.sha }}
-#           # docker stack deploy -c ./swarm/dev-stack.yml multi-client
-#           # EOF
-          
-
-#           echo "Deploying new image on remote Swarm manager..."
-#           ssh -i private_key.pem -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST <<EOF
-#           docker service update \
-#           --image swatikadam16/client-b-python-app:${{ github.sha }} \
-#           multi-client_client-b
-#           EOF
-
 name: Deploy
 
 on:
   push:
     branches:
-      - dev
-      - stage
-      - master
-  workflow_dispatch:
+      - master       
+  workflow_dispatch:  
 
 jobs:
   build:
@@ -93,83 +12,164 @@ jobs:
 
     steps:
 
-      # 1️⃣ Checkout code
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 2️⃣ Docker login
+    
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 3️⃣ Build image
+      
       - name: Build Docker image
         run: |
-          docker build -t client-a-node-app:${{ github.sha }} .
+          docker build -t client-b-python-app:${{ github.sha }} .
 
-      # 4️⃣ Tag image
       - name: Tag Docker image
         run: |
-          docker tag client-a-node-app:${{ github.sha }} swatikadam16/client-a-node-app:${{ github.sha }}
+          docker tag client-b-python-app:${{ github.sha }} swatikadam16/client-b-python-app:${{ github.sha }}
 
-      # 5️⃣ Push image
-      - name: Push Docker image
+      
+
+  
+      - name: Push Docker image to Docker Hub
         run: |
-          docker push swatikadam16/client-a-node-app:${{ github.sha }}
+          docker push swatikadam16/client-b-python-app:${{ github.sha }}
+    
 
-      # 6️⃣ Detect branch + set STACK_FILE
-      - name: Set Environment
+      
+      - name: Test SSH connection
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
         run: |
-          echo "Full ref: $GITHUB_REF"
-          BRANCH_NAME=${GITHUB_REF#refs/heads/}
-          echo "Branch: $BRANCH_NAME"
+          echo "${SSH_KEY}" > private_key.pem
+          nc -zv $SSH_HOST 22
+          chmod 600 private_key.pem
+          echo "Testing SSH connectivity to $SSH_USER@$SSH_HOST ..."
+          ssh -i private_key.pem -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST "echo ✅ Connected successfully to $(hostname)"
 
-          if [[ "$BRANCH_NAME" == "master" ]]; then
-            echo "STACK_FILE=dev-stack.yaml" >> $GITHUB_ENV
-          elif [[ "$BRANCH_NAME" == "stage" ]]; then
-            echo "STACK_FILE=stage-stack.yaml" >> $GITHUB_ENV
-          else
-            echo "STACK_FILE=prod-stack.yaml" >> $GITHUB_ENV
-          fi
 
-      # 7️⃣ Debug (IMPORTANT)
-      - name: Debug
+      - name: Deploy to Docker Swarm
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+
         run: |
-          echo "Using STACK_FILE=${{ env.STACK_FILE }}"
-          ls -R swarm/
-
-      # 8️⃣ Setup SSH
-      - name: Setup SSH
-        run: |
-          echo "${{ secrets.SSH_KEY }}" > private_key.pem
+          echo "${SSH_KEY}" > private_key.pem
           chmod 600 private_key.pem
 
-      # 9️⃣ Test SSH
-      - name: Test SSH connection
-        run: |
-          nc -zv ${{ secrets.SSH_HOST }} 22
-          ssh -i private_key.pem -o StrictHostKeyChecking=no \
-          ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo ✅ Connected"
+          # echo "Deploying new image on remote Swarm manager..."
+          # ssh -i private_key.pem -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST <<EOF
+          # export IMAGE_TAG=${{ github.sha }}
+          # docker stack deploy -c ./swarm/dev-stack.yaml multi-client
+          # EOF
+          
 
-      # 🔟 Copy stack file
-      - name: Copy stack file
-        run: |
-          scp -i private_key.pem -o StrictHostKeyChecking=no \
-          swarm/${{ env.STACK_FILE }} \
-          ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/${{ secrets.SSH_USER }}/
-
-      # 1️⃣1️⃣ Deploy to Swarm
-      - name: Deploy
-        run: |
-          ssh -i private_key.pem -o StrictHostKeyChecking=no \
-          ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<EOF
-
-          export IMAGE_TAG=${{ github.sha }}
-
-          echo "Deploying ${{ env.STACK_FILE }} with IMAGE_TAG=$IMAGE_TAG"
-
-          docker stack deploy -c /home/${{ secrets.SSH_USER }}/${{ env.STACK_FILE }} multi-client
-
+          echo "Deploying new image on remote Swarm manager..."
+          ssh -i private_key.pem -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST <<EOF
+          docker service update \
+          --image swatikadam16/client-b-python-app:${{ github.sha }} \
+          multi-client_client-b
           EOF
+
+# name: Deploy
+
+# on:
+#   push:
+#     branches:
+#       - dev
+#       - stage
+#       - master
+#   workflow_dispatch:
+
+# jobs:
+#   build:
+#     runs-on: ubuntu-latest
+
+#     steps:
+
+#       # 1️⃣ Checkout code
+#       - name: Checkout repository
+#         uses: actions/checkout@v3
+
+#       # 2️⃣ Docker login
+#       - name: Log in to Docker Hub
+#         uses: docker/login-action@v3
+#         with:
+#           username: ${{ secrets.DOCKERHUB_USERNAME }}
+#           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+#       # 3️⃣ Build image
+#       - name: Build Docker image
+#         run: |
+#           docker build -t client-a-node-app:${{ github.sha }} .
+
+#       # 4️⃣ Tag image
+#       - name: Tag Docker image
+#         run: |
+#           docker tag client-a-node-app:${{ github.sha }} swatikadam16/client-a-node-app:${{ github.sha }}
+
+#       # 5️⃣ Push image
+#       - name: Push Docker image
+#         run: |
+#           docker push swatikadam16/client-a-node-app:${{ github.sha }}
+
+#       # 6️⃣ Detect branch + set STACK_FILE
+#       - name: Set Environment
+#         run: |
+#           echo "Full ref: $GITHUB_REF"
+#           BRANCH_NAME=${GITHUB_REF#refs/heads/}
+#           echo "Branch: $BRANCH_NAME"
+
+#           if [[ "$BRANCH_NAME" == "master" ]]; then
+#             echo "STACK_FILE=dev-stack.yaml" >> $GITHUB_ENV
+#           elif [[ "$BRANCH_NAME" == "stage" ]]; then
+#             echo "STACK_FILE=stage-stack.yaml" >> $GITHUB_ENV
+#           else
+#             echo "STACK_FILE=prod-stack.yaml" >> $GITHUB_ENV
+#           fi
+
+#       # 7️⃣ Debug (IMPORTANT)
+#       - name: Debug
+#         run: |
+#           echo "Using STACK_FILE=${{ env.STACK_FILE }}"
+#           ls -R swarm/
+
+#       # 8️⃣ Setup SSH
+#       - name: Setup SSH
+#         run: |
+#           echo "${{ secrets.SSH_KEY }}" > private_key.pem
+#           chmod 600 private_key.pem
+
+#       # 9️⃣ Test SSH
+#       - name: Test SSH connection
+#         run: |
+#           nc -zv ${{ secrets.SSH_HOST }} 22
+#           ssh -i private_key.pem -o StrictHostKeyChecking=no \
+#           ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo ✅ Connected"
+
+#       # 🔟 Copy stack file
+#       - name: Copy stack file
+#         run: |
+#           scp -i private_key.pem -o StrictHostKeyChecking=no \
+#           swarm/${{ env.STACK_FILE }} \
+#           ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/${{ secrets.SSH_USER }}/
+
+#       # 1️⃣1️⃣ Deploy to Swarm
+#       - name: Deploy
+#         run: |
+#           ssh -i private_key.pem -o StrictHostKeyChecking=no \
+#           ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} <<EOF
+
+#           export IMAGE_TAG=${{ github.sha }}
+
+#           echo "Deploying ${{ env.STACK_FILE }} with IMAGE_TAG=$IMAGE_TAG"
+
+#           docker stack deploy -c /home/${{ secrets.SSH_USER }}/${{ env.STACK_FILE }} multi-client
+
+#           EOF
