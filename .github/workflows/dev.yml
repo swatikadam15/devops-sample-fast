@@ -120,7 +120,7 @@ jobs:
           if [[ "${GITHUB_REF}" == "refs/heads/master" ]]; then
             echo "STACK_FILE=dev-stack.yaml" >> $GITHUB_ENV
           elif [[ "${GITHUB_REF}" == "refs/heads/stage" ]]; then
-            echo "STACK_FILE=stage-stack.yml" >> $GITHUB_ENV
+            echo "STACK_FILE=stage-stack.yaml" >> $GITHUB_ENV
           else
             echo "STACK_FILE=prod-stack.yml" >> $GITHUB_ENV
           fi
